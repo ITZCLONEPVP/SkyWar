@@ -15,11 +15,14 @@ class SkyWar extends PluginBase{
 	
 	private $arenas = [];
 	
+	private $matchBackup = null;
+	
 	public function onEnable(){
 		$this->loadPlugin();
 	}
 	
 	public function loadPlugin(){
+	    $this->mapBackup = new MapBackup($this);
 		$pdatas = $this->pdata;
 		$this->loadArenas();
 	}

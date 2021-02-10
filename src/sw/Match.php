@@ -2,7 +2,6 @@
 declare(strict_types=1);
 namespace sw;
 
-use pocketmine\Server;
 use pocketmine\Player;
 use pocketmine\entity\Entity;
 use pocketmine\event\player\PlayerJoinEvent;
@@ -15,11 +14,34 @@ class Match{
 	/** @var MatchData $pdata */
 	private $data;
 	private $players;
-	private $player_data;
+	private $spectators;
+	private $kill_points;
 	public $server;
+	private $mtime;
 	
-	public __construct(SkyWar $plugin){
-	    $this->server = Server::getInstance(); 
+	public __construct(SkyWar $plugin, array $data){
+	    $this->plugin = $plugin;
+	    $this->data = $data;
+	    $this->server = $plugin->getServer();
+	    
+	    if(!$this->server->isLevelGenerated($this->plugin->pdata["lobby"])){
+	        $plugin->getLogger()->error("Invalid lobby level");
+	        return;
+	    }
+	    if(!$this->server->isLevelLoaded($this->plugin->pdata["lobby"])){
+	        $plugin->getServer()->loadLevel($this->plugin->pdata["lobby"]);
+	    }
+        
+        $this->mtime = new MatchTime($this);
+        
+        if(!file_exists($this->plugin->getDataFolder() . "saves/{$this->data["level"]}.zip"))
+            $this->plugin->saveMap($this->plugin->getServer()->getLevelByName($this->data["level"]));
+        $this->plugin->loadMap($this->data["level"]);
+        
+        $this->level = $this->server->getLevelByName($this->data["level"]);
+        
+        $plugin->getServer()->getPluginManager()->registerEvents($this, $plugin);
+        $plugin->getScheduler()->scheduleRepeatingTask($this->mtime, 20);
 	}
 	
 	public function join(Player $player){
@@ -37,14 +59,30 @@ class Match{
 	}
 	
 	public function addPlayer(Player $player){
-	    $this->players[$player->getXuid()] = $player;
-	    $this->player_data[$player->getXuid()] = [
-	        "kills" => 0,
-	        "status" => 0; // 0 is alive, 1 is death, 2 is left
-	    ];
+	    $xuid = $player->getXuid();
+	    $this->players[$xuid] = $player;
+	    $this->kill_points[$xuid] = 0;
 	}
 	
-	public function setFeature(Player $player, $mode){
+	public function removePlayer(Player $player, bool $left = false){
+	    $xuid = $player->getXuid();
+	    if($left){
+	        $this->setFeature($player);
+	        if(isset($this->players[$xuid])) unset($this->players[$xuid]);
+	        else unset($this->spectators[$xuid]);
+	    }else{
+	        $this->spectators[$xuid] = $player;
+	        unset($this->players[$xuid]);
+	        $this->setFeature($player, 2);
+	    }
+	    unset($this->kill_points[$xuid]);
+	}
+	
+	public function broadcastTip(string $mess){
+	    foreach($player->addPlayer)
+	}
+	
+	public function setFeature(Player $player, int $mode = -1){
 	    $inv = $player->getInventory();
 	    $a_inv = $player->getArmorInventory();
 	    $c_inv = $player->getCursorInventory();
@@ -88,7 +126,6 @@ class Match{
 	}
 	
 	public function genCage(Position $pos){
-	    for($this->players as $player){
 	}
 	
 	public function removeCage(Position $pos){
@@ -111,5 +148,25 @@ class Match{
 	    $player = $event->getPlayer();
 	    //Todo phase system
 		//$event->setCancelled(true);
+	}
+	
+	public function startMatch(){
+	    $this->
+	}
+	
+	public function endMatch(){
+	    
+	}
+	
+	public function checkEnd(){
+	    if(count($this->$players) > 2) return;
+	    $this->endMatch();
+	}
+	
+	public function fillChests(){
+	    foreach($this->chestpos as $pos){
+	        $inv = $this->level->getTile(Position::fromObject(Vecter3::fromstring($pos), $this->level))->getInventory();
+	        
+	    }
 	}
 }

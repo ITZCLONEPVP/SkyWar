@@ -10,24 +10,23 @@ use pocketmine\tile\Sign;
 
 use pocketmine\level\Level;
 class MatchTime extends Task{
-    public const WAIT_TIME = 40;
-    public const RESTART_TIME = 10;
-    
     public $minPlayer = 2;
     
     private $match;
-    public $waitTime = self::WAIT_TIME;
-    public $restartTime = self::RESTART_TIME;
-    public $gameTime = 0;
+    public $waitTime = 40;
+    public $restartTime = 10;
+    public $matchTime = 0;
     public $phase = 0;
-    public $forcestart = false;
+    public $forceStart = false;
     
     public function __construct(Match $match) {
         $this->match = $match;
+        $this->setUp();
 		$this->minPlayer = SkyWar::getInstance()->getPluginData("minPlayer");
     }
     
     public function setUp(){
+        
     }
 
     public function onRun(int $tick) {
@@ -35,7 +34,7 @@ class MatchTime extends Task{
         $this->refreshSign();
         switch ($this->phase) {
             case 0:
-            	if(count($this->match->players) < $this->minPlayer && !$this->forcestart){
+            	if(count($this->match->players) < $this->minPlayer && !$this->forceStart){
             		$this->match->broadcast("Waiting for more player!", Match::MESS_TIP);
             		if($waitTime < self::WAIT_TIME) $this->waitTime = self::WAIT_TIME;
             		break;
@@ -45,33 +44,33 @@ class MatchTime extends Task{
 
                 if($this->waitTime == 5) {
                     foreach ($this->plugin->players as $player) {
-                        $this->match->broadcast("WM SkyWars MW", Match::MESS_TITLE);
+                        $this->match->broadcastTitle("WM SkyWars MW");
                     }
                 }
                 
                 if($this->waitTime <= 4){
-					$this->match->broadcast("text", Match::MESS_TITLE);
-					$this->match->broadcast("Cage open in: " . $this->waitTime, Match::MESS_TIP);
+					$this->match->broadcastTitle("text");
+					$this->match->broadcastTip("Cage open in: {$this->waitTime}");
 				}
 
-                if($this->waitTime <= 0) $this->plugin->startGame();
+                if($this->waitTime <= 0) $this->plugin->startMatch();
                 $this->waitTime--;
                 break;
             case 1:
                 $this->plugin->checkEnd();
-				if($this->gameTime % SkyWars::getInstance()->getData("fill-time") == 0){
+				if($this->matchTime % SkyWars::getInstance()->getData("fill-time") == 0){
 				    $this->match->broadcast("All chest have been refilled!", Match::MESS_TIP);
 				    $this->match->level->addSound(new AnvilUseSound($player->asVector3()));
 				}
-                if($this->gameTime % 60 == 0 && count($this->plugin->dragonTargetManager->dragons) < $this->plugin->data["maxDragons"]) {
+                if($this->matchTime % 60 == 0 && count($this->plugin->dragonTargetManager->dragons) < $this->plugin->data["maxDragons"]) {
                     $this->plugin->dragonTargetManager->addDragon();
-                    $this->plugin->broadcastMessage(Lang::getGamePrefix() . Lang::getMessage("dragon-spawned"));
+                    $this->plugin->broadcastMessage(Lang::getMatchPrefix() . Lang::getMessage("dragon-spawned"));
                 }
-                $this->gameTime++;
+                $this->matchTime++;
                 break;
             case 2:
                 if($this->rewaitTime == 0) {
-                    $this->plugin->broadcastMessage(Lang::getGamePrefix() . Lang::getMessage("restarting"));
+                    $this->plugin->broadcastMessage(Lang::getMatchPrefix() . Lang::getMessage("restarting"));
 
                     $players = $this->plugin->players + $this->plugin->spectators;
                     foreach ($players as $player) {
@@ -121,7 +120,7 @@ class MatchTime extends Task{
 
         $phase = $this->phase === 0 ?
             ((count($this->plugin->players) < $this->plugin->data["slots"]) ? "§aJoin" : "§6Full") :
-            (($this->phase === 1) ? "§5InGame" : "§cRestarting...");
+            (($this->phase === 1) ? "§5InMatch" : "§cRestarting...");
 
         $sign->setText(
             "§5§lDragons§r",
@@ -195,8 +194,8 @@ class MatchTime extends Task{
                 $players = $this->plugin->players + $this->plugin->spectators; // Did you try this already? xd
                 foreach ($players as $player) {
                     ScoreboardBuilder::sendScoreBoard($player, str_replace(
-                        ["{%kit}", "{%gameTime}"],
-                        [$getKit($this->plugin->plugin, $player), gmdate("i:s", $this->gameTime)],
+                        ["{%kit}", "{%matchTime}"],
+                        [$getKit($this->plugin->plugin, $player), gmdate("i:s", $this->matchTime)],
                         $replaceDefault($scoreboardSettings["formats"]["playing"], $map)
                     ));
                 }
@@ -216,7 +215,7 @@ class MatchTime extends Task{
 
     public function resetTimer() {
         $this->waitTime = self::START_TIME;
-        $this->gameTime = 0;
+        $this->matchTime = 0;
         $this->rewaitTime = self::RESTART_TIME;
 
         $this->phase = 0;
