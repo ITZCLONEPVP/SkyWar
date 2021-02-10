@@ -1,0 +1,6 @@
+name: SkyWar
+main: sw\SkyWar;
+api: 3.17.0
+version: 0.0.1
+description: SkyWar Minigame plugin for Pmmp
+author: NTT
